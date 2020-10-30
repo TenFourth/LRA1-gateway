@@ -1,13 +1,20 @@
+import atexit
 import urllib3
 import serial
+import shutil
+import sys
+import threading
 import time
 import os
 
 HTTP_POST_URL = 'http://localhost/upload.php'
 LRA1_SERIAL_DEV = '/dev/ttyAMA0'
 LRA1_SERIAL_BAUD = 115200
-LRA1_SERIAL_TIMEOUT = 60
+LRA1_SERIAL_TIMEOUT = 70
 SAVEPATH_SEND_FAIL = '/var/spool/lra1-recv'
+
+work = True
+send_buffer_list = []
 
 def lra1_receive():
     ser = serial.Serial(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD)
@@ -27,29 +34,82 @@ def lra1_set_recv():
     ser.write('RECV\r\n')
     ser.close()
 
+def get_miss_send():
+    path = os.path.join(SAVEPATH_SEND_FAIL, 'send.data')
+    if not os.path.exists(path):
+        return ''
+
+    read = ''
+    try:
+        with open(path, mode='r') as f:
+            read = f.read()
+    except (OSError, IOError):
+        print('failed to get miss send')
+
+    return read
+
 def save_miss_send(data):
     try:
         if not os.path.exists(SAVEPATH_SEND_FAIL):
             os.makedirs(SAVEPATH_SEND_FAIL)
 
         path = os.path.join(SAVEPATH_SEND_FAIL, 'send.data')
-        with open(path, mode='a') as f:
-            f.write(data + '\n')
+        with open(path, mode='w') as f:
+            f.write(data)
     except (OSError, IOError):
         print('failed to save miss send')
 
+def remove_miss_send():
+    if os.path.exists(SAVEPATH_SEND_FAIL):
+        shutil.rmtree(SAVEPATH_SEND_FAIL, True)
+
 def send_data(data):
+    buffer = get_miss_send() + data
+
     try:
         http = urllib3.PoolManager()
-        http.request('POST', HTTP_POST_URL, fields={'data': data})
+        http.request('POST', HTTP_POST_URL, fields={'data': buffer})
+        remove_miss_send()
     except urllib3.exceptions.HTTPError:
         print('http exception')
-        save_miss_send(data)
+        save_miss_send(buffer)
 
-while True:
-    data = lra1_receive()
-    if(data.startswith('>') or len(data) == 0):
-        lra1_break_ctrl()
-        lra1_set_recv()
-    else:
-        send_data(data)
+def send_work(lock):
+    while work == True:
+        buffer = ''
+        lock.acquire()
+        for i in range(len(send_buffer_list)):
+            buffer += send_buffer_list.pop(0) + '\n'
+        lock.release()
+        send_data(buffer)
+        time.sleep(10)
+
+def push_buffer(data, lock):
+    lock.acquire()
+    send_buffer_list.append(data)
+    lock.release()
+
+def on_exit():
+    print("terminating...")
+    work = False
+
+def main():
+    atexit.register(on_exit)
+    lock = threading.Lock()
+    send_thread = threading.Thread(target=send_work, args=(lock, ))
+    send_thread.start()
+
+    while work == True:
+        try:
+            data = lra1_receive()
+            if(data.startswith('>') or len(data) == 0):
+                lra1_break_ctrl()
+                lra1_set_recv()
+            else:
+                push_buffer(data, lock)
+        except KeyboardInterrupt:
+            sys.exit()
+    send_thread.join()
+
+if __name__ == '__main__':
+    main()
