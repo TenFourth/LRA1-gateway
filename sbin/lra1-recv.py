@@ -66,6 +66,8 @@ def remove_miss_send():
 
 def send_data(data):
     buffer = get_miss_send() + data
+    if len(buffer) == 0:
+        return
 
     try:
         http = urllib3.PoolManager()
