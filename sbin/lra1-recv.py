@@ -3,6 +3,7 @@ import urllib3
 import serial
 import shutil
 import sys
+import syslog
 import threading
 import time
 import os
@@ -43,21 +44,21 @@ def get_miss_send():
     try:
         with open(path, mode='r') as f:
             read = f.read()
-    except (OSError, IOError):
-        print('failed to get miss send')
+    except (OSError, IOError) as e:
+        syslog.syslog(syslog.LOG_WARNING, 'failed to get spool [' + path + '] - ' + e.strerror)
 
     return read
 
 def save_miss_send(data):
+    path = os.path.join(SAVEPATH_SEND_FAIL, 'send.data')
     try:
         if not os.path.exists(SAVEPATH_SEND_FAIL):
             os.makedirs(SAVEPATH_SEND_FAIL)
 
-        path = os.path.join(SAVEPATH_SEND_FAIL, 'send.data')
         with open(path, mode='w') as f:
             f.write(data)
-    except (OSError, IOError):
-        print('failed to save miss send')
+    except (OSError, IOError) as e:
+        syslog.syslog(syslog.LOG_WARNING, 'failed to save spool [' + path + '] - ' + e.strerror)
 
 def remove_miss_send():
     if os.path.exists(SAVEPATH_SEND_FAIL):
@@ -70,8 +71,8 @@ def send_data(data):
         http = urllib3.PoolManager()
         http.request('POST', HTTP_POST_URL, fields={'data': buffer})
         remove_miss_send()
-    except urllib3.exceptions.HTTPError:
-        print('http exception')
+    except urllib3.exceptions.HTTPError as e:
+        syslog.syslog(syslog.LOG_WARNING, 'http exception - ' + e.message)
         save_miss_send(buffer)
 
 def send_work(lock):
@@ -90,7 +91,7 @@ def push_buffer(data, lock):
     lock.release()
 
 def on_exit():
-    print("terminating...")
+    syslog.syslog(syslog.LOG_INFO, "terminating...")
     work = False
 
 def main():
