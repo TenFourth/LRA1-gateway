@@ -1,0 +1,11 @@
+[Unit]
+Description=LRA1 received data transfer
+After=network.target
+
+[Service]
+Restart=always
+EnvironmentFile=-/usr/local/etc/lra1-gateway.conf
+ExecStart=/usr/local/sbin/lra1-gateway.py
+
+[Install]
+WantedBy=default.target
