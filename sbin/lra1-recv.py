@@ -1,4 +1,5 @@
 import atexit
+import base64
 import urllib3
 import serial
 import shutil
@@ -64,13 +65,23 @@ def remove_miss_send():
     if os.path.exists(SAVEPATH_SEND_FAIL):
         shutil.rmtree(SAVEPATH_SEND_FAIL, True)
 
+def authorization_header():
+    if ('HTTP_POST_USER' not in os.environ) or ('HTTP_POST_PASSWORD' not in os.environ):
+        return {}
+
+    post_user = os.environ.get('HTTP_POST_USER')
+    post_password = os.environ.get('HTTP_POST_PASSWORD')
+
+    basic_user_and_pasword = base64.b64encode('{}:{}'.format(post_user, post_password).encode('utf-8'))
+    return {"Authorization": "Basic " + basic_user_and_pasword.decode('utf-8')}
+
 def send_data(data):
     buffer = get_miss_send() + data
     if len(buffer) == 0:
         return
 
     try:
-        http = urllib3.PoolManager()
+        http = urllib3.PoolManager(headers=authorization_header())
         http.request('POST', HTTP_POST_URL, fields={'data': buffer})
         remove_miss_send()
     except urllib3.exceptions.HTTPError as e:
