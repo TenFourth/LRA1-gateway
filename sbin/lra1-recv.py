@@ -9,7 +9,7 @@ import threading
 import time
 import os
 
-HTTP_POST_URL = 'http://localhost/upload.php'
+HTTP_POST_URL = os.environ.get('HTTP_POST_URL')
 LRA1_SERIAL_DEV = '/dev/ttyAMA0'
 LRA1_SERIAL_BAUD = 115200
 LRA1_SERIAL_TIMEOUT = 70
