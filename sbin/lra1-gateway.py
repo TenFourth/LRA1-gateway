@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import atexit
 import base64
 import urllib3
