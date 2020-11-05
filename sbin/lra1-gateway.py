@@ -12,9 +12,9 @@ import time
 import os
 
 HTTP_POST_URL = os.environ.get('HTTP_POST_URL')
-LRA1_SERIAL_DEV = '/dev/ttyAMA0'
-LRA1_SERIAL_BAUD = 115200
-LRA1_SERIAL_TIMEOUT = 70
+LRA1_SERIAL_DEV = os.environ.get('LRA1_SERIAL_DEV', '/dev/ttyAMA0')
+LRA1_SERIAL_BAUD = int(os.environ.get('LRA1_SERIAL_BAUD', '115200'))
+LRA1_SERIAL_TIMEOUT = int(os.environ.get('LRA1_SERIAL_TIMEOUT', '70'))
 SAVEPATH_SEND_FAIL = '/var/spool/lra1-recv'
 
 work = True
