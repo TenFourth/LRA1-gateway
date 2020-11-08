@@ -16,6 +16,7 @@ HTTP_POST_URL = os.environ.get('HTTP_POST_URL')
 LRA1_SERIAL_DEV = os.environ.get('LRA1_SERIAL_DEV', '/dev/ttyAMA0')
 LRA1_SERIAL_BAUD = int(os.environ.get('LRA1_SERIAL_BAUD', '115200'))
 LRA1_SERIAL_TIMEOUT = int(os.environ.get('LRA1_SERIAL_TIMEOUT', '70'))
+LRA1_ENABLE_DISPLAY = True if int(os.environ.get('LRA1_ENABLE_DISPLAY', '0')) != 0 else False
 SAVEPATH_SEND_FAIL = '/var/spool/lra1-recv'
 
 work = True
@@ -185,7 +186,7 @@ def main():
     send_thread.start()
 
     lra1 = LRA1(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD, LRA1_SERIAL_TIMEOUT)
-    lra1.set_display(True)
+    lra1.set_display(LRA1_ENABLE_DISPLAY)
     lra1.break_ctrl()
     lra1.set_recv()
 

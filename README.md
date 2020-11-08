@@ -1,5 +1,5 @@
 # LRA1-gateway
-LRA1で受け取ったデータをRaspberry Piで中継し、Webサーバーへ送るためのプログラムです
+LoRaモジュール(LRA1)で受け取ったデータをRaspberry Piで中継し、Webサーバーへ送るためのプログラムです
 
 ## インストール
 
@@ -41,3 +41,12 @@ HTTP_POST_URL='http://localhost/upload.php'
 
 * HTTP_POST_USER
 * HTTP_POST_PASSWORD
+
+### LoRaモジュールの設定
+
+| 設定名 | 説明 |
+|-------|------|
+| LRA1_SERIAL_DEV | 通信ポートのパスを指定します (例: /dev/ttyS0) |
+| LRA1_SERIAL_BAUD | シリアル通信のボーレートを指定します |
+| LRA1_SERIAL_TIMEOUT | 指定した時間(秒数)データが来ない時に、BREAK信号を送って待ち受け状態をやり直します |
+| LRA1_ENABLE_DISPLAY | LRA1評価ボードに搭載のLCDディスプレイにメッセージを表示するようにします |
