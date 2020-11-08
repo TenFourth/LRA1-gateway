@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import atexit
 import base64
@@ -20,23 +21,91 @@ SAVEPATH_SEND_FAIL = '/var/spool/lra1-recv'
 work = True
 send_buffer_list = []
 
-def lra1_receive():
-    ser = serial.Serial(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD)
-    ser.timeout = LRA1_SERIAL_TIMEOUT
-    str = ser.readline().strip()
-    ser.close()
-    return str
+class LRA1():
+    def __init__(self, dev, baudrate, timeout):
+        self.ser = None
+        self.dev = dev
+        self.baudrate = baudrate
+        self.timeout = timeout
+        self._open()
 
-def lra1_break_ctrl():
-    ser = serial.Serial(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD)
-    ser.write('\x03')  # Ctrl + C
-    time.sleep(1)
-    ser.close()
+    def __del__(self):
+        if (self.ser is not None):
+            self.ser.close()
 
-def lra1_set_recv():
-    ser = serial.Serial(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD)
-    ser.write('RECV\r\n')
-    ser.close()
+    def _open(self):
+        if (self.ser is not None):
+            return
+
+        try:
+            self.ser = serial.Serial(
+                port=self.dev,
+                baudrate=self.baudrate,
+                parity=serial.PARITY_NONE,
+                timeout=self.timeout,
+                xonxoff=False,
+                rtscts=False,
+                dsrdtr=False
+            )
+        except (serial.SerialException) as e:
+            syslog.syslog(syslog.LOG_WARNING, 'Failed to open serial device ' + self.dev + ' - ' + e.strerror)
+            self.ser = None
+
+    def _send(self, message):
+        self._open()
+        if (self.ser is None):
+            return
+
+        self.ser.write(message)
+
+    def receive(self):
+        data = ''
+        begin = time.time()
+        while(time.time() - begin < LRA1_SERIAL_TIMEOUT):
+            if (self.ser is not None):
+                try:
+                    data = self.ser.readline().strip()
+                    if (len(data) > 0):
+                        break
+                except (serial.SerialException) as e:
+                    self.ser.close()
+                    self.ser = None
+            else:
+                self._open()
+            time.sleep(3)
+
+        return data
+
+    def set_display(self, flag):
+        self.display = flag
+
+    def _wait_for_ok(self):
+        get = ''
+        while (get != 'OK'):
+            get = self.ser.readline().strip()
+            time.sleep(0.01)
+        time.sleep(0.1)  # prevent for dropping first character
+
+    def _display_message(self, message1='', message2='', clear=False):
+        if (self.display == False):
+            return
+        if (clear == True):
+            self._send('LCLR\r\n')
+            self._wait_for_ok()
+        if (message1):
+            self._send('LPOS=0:LPRINT "' + message1 + '"\r\n')
+            self._wait_for_ok()
+        if (message2):
+            self._send('LPOS=64:LPRINT "' + message2 + '"\r\n')
+            self._wait_for_ok()
+
+    def break_ctrl(self):
+        self._send('\x03')  # Ctrl + C
+        self._wait_for_ok()
+
+    def set_recv(self):
+        self._display_message('Gateway ', ' Standby')
+        self._send('RECV\r\n')
 
 def get_miss_send():
     path = os.path.join(SAVEPATH_SEND_FAIL, 'send.data')
@@ -115,16 +184,23 @@ def main():
     send_thread = threading.Thread(target=send_work, args=(lock, ))
     send_thread.start()
 
+    lra1 = LRA1(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD, LRA1_SERIAL_TIMEOUT)
+    lra1.set_display(True)
+    lra1.break_ctrl()
+    lra1.set_recv()
+
     while work == True:
         try:
-            data = lra1_receive()
-            if(data.startswith('>') or len(data) == 0):
-                lra1_break_ctrl()
-                lra1_set_recv()
+            data = lra1.receive()
+            if(data.endswith('>') or len(data) == 0):
+                #syslog.syslog(syslog.LOG_INFO, 'received data -> [' + data + ']')
+                lra1.break_ctrl()
+                lra1.set_recv()
             else:
                 push_buffer(data, lock)
         except KeyboardInterrupt:
             sys.exit()
+    del lra1
     send_thread.join()
 
 if __name__ == '__main__':
