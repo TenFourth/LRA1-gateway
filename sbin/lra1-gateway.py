@@ -82,7 +82,7 @@ class LRA1():
 
     def _wait_for_ok(self):
         get = ''
-        while (get != 'OK'):
+        while (self.ser is not None and get != 'OK'):
             get = self.ser.readline().strip()
             time.sleep(0.01)
         time.sleep(0.1)  # prevent for dropping first character
