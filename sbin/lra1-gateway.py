@@ -17,7 +17,7 @@ LRA1_SERIAL_DEV = os.environ.get('LRA1_SERIAL_DEV', '/dev/ttyAMA0')
 LRA1_SERIAL_BAUD = int(os.environ.get('LRA1_SERIAL_BAUD', '115200'))
 LRA1_SERIAL_TIMEOUT = int(os.environ.get('LRA1_SERIAL_TIMEOUT', '70'))
 LRA1_ENABLE_DISPLAY = True if int(os.environ.get('LRA1_ENABLE_DISPLAY', '0')) != 0 else False
-SAVEPATH_SEND_FAIL = '/var/spool/lra1-recv'
+SAVEPATH_SEND_FAIL = '/var/spool/lra1-gateway'
 
 work = True
 send_buffer_list = []
@@ -105,7 +105,7 @@ class LRA1():
         self._wait_for_ok()
 
     def set_recv(self):
-        self._display_message('Gateway ', ' Standby')
+        self._display_message('Gateway ', '   Ready')
         self._send('RECV\r\n')
 
 def get_miss_send():
@@ -154,8 +154,12 @@ def send_data(data):
 
     try:
         http = urllib3.PoolManager(headers=authorization_header())
-        http.request('POST', HTTP_POST_URL, fields={'data': buffer})
-        remove_miss_send()
+        r = http.request('POST', HTTP_POST_URL, fields={'data': buffer})
+        if (r.status == 200 or r.status == 400):
+            remove_miss_send()
+        else:
+            syslog.syslog(syslog.LOG_WARNING, 'failed to POST by http status=' + str(r.status))
+            save_miss_send(buffer)
     except urllib3.exceptions.HTTPError as e:
         syslog.syslog(syslog.LOG_WARNING, 'http exception - ' + e.message)
         save_miss_send(buffer)
