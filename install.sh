@@ -4,7 +4,7 @@ GITHUB_RAW_CONTENT=https://raw.githubusercontent.com/TenFourth/LRA1-gateway/main
 
 install_pkg() {
   local pkg=$1
-  /usr/bin/dpkg -l ${pkg}
+  /usr/bin/dpkg -l --no-pager ${pkg}
   if [ $? -ne 0 ]; then
     /usr/bin/apt install -y ${pkg}
   fi
