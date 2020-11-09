@@ -3,18 +3,10 @@ LoRaモジュール(LRA1)で受け取ったデータをRaspberry Piで中継し�
 
 ## インストール
 
-スクリプトファイル(lra1-gateway.py)を `/usr/local/sbin` へコピーします
+以下のコマンドをターミナルに貼り付けて実行します
 
 ```shell
-$ sudo cp ./sbin/lra1-gateway.py /usr/local/sbin
-```
-
-SystemdのUnitファイルを `/etc/systemd/system` へコピーします。コピーしたらUnitをreloadし、自動起動を有効にします
-
-```shell
-$ sudo cp ./etc/systemd/system/lra1-gateway.service /etc/systemd/system
-$ sudo systemctl daemon-reload
-$ sudo systemctl enable lra1-gateway.service
+sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/TenFourth/LRA1-gateway/main/install.sh)"
 ```
 
 設定ファイルを `/usr/local/etc` へコピーします。必要に応じて設定内容を変更してください
