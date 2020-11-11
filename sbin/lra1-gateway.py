@@ -196,7 +196,7 @@ def main():
         GPIO.output(4,GPIO.LOW)
         time.sleep(0.5)
         GPIO.output(4,GPIO.HIGH)
-        time.sleep(0.5)
+        time.sleep(3)
 
     lra1 = LRA1(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD, LRA1_SERIAL_TIMEOUT)
     lra1.set_display(LRA1_ENABLE_DISPLAY)
