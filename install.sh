@@ -16,6 +16,7 @@ download() {
   /usr/bin/curl -L ${url} -o ${dest_path}
 }
 
+install_pkg python-rpi.gpio
 install_pkg python-serial
 install_pkg python-urllib3
 

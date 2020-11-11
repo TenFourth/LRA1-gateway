@@ -11,6 +11,7 @@ import syslog
 import threading
 import time
 import os
+import RPi.GPIO as GPIO
 
 HTTP_POST_URL = os.environ.get('HTTP_POST_URL')
 LRA1_SERIAL_DEV = os.environ.get('LRA1_SERIAL_DEV', '/dev/ttyAMA0')
@@ -188,6 +189,14 @@ def main():
     lock = threading.Lock()
     send_thread = threading.Thread(target=send_work, args=(lock, ))
     send_thread.start()
+
+    if (LRA1_SERIAL_DEV == '/dev/ttyS0'):
+        GPIO.setmode(GPIO.BCM)  #GPIOへアクセスする番号をBCMの番号で指定することを宣言します。                        
+        GPIO.setup(4,GPIO.OUT)
+        GPIO.output(4,GPIO.LOW)
+        time.sleep(0.5)
+        GPIO.output(4,GPIO.HIGH)
+        time.sleep(0.5)
 
     lra1 = LRA1(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD, LRA1_SERIAL_TIMEOUT)
     lra1.set_display(LRA1_ENABLE_DISPLAY)
