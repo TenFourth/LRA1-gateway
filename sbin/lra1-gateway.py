@@ -112,7 +112,6 @@ class LRA1():
         if (self.own_id is None):
             self._send('PRINT OWN\r\n')
             self.own_id = self._get_response()
-        syslog.syslog(syslog.LOG_INFO, 'SN=' + self.own_sn + ', OWN=' + self.own_id)
 
     def _get_response(self):
         if (self.ser is None):
@@ -195,14 +194,14 @@ def authorization_header():
     basic_user_and_pasword = base64.b64encode('{}:{}'.format(post_user, post_password).encode('utf-8'))
     return {"Authorization": "Basic " + basic_user_and_pasword.decode('utf-8')}
 
-def send_data(data):
+def send_data(data, lra1):
     buffer = get_miss_send() + data
     if len(buffer) == 0:
         return
 
     try:
         http = urllib3.PoolManager(headers=authorization_header())
-        r = http.request('POST', HTTP_POST_URL, fields={'data': buffer})
+        r = http.request('POST', HTTP_POST_URL, fields={'data': buffer, 'own_id': lra1.own_id, 'own_sn': lra1.own_sn})
         if (r.status == 200 or r.status == 400):
             remove_miss_send()
         else:
@@ -212,14 +211,14 @@ def send_data(data):
         syslog.syslog(syslog.LOG_WARNING, 'http exception - ' + e.message)
         save_miss_send(buffer)
 
-def send_work(lock):
+def send_work(lock, lra1):
     while work == True:
         buffer = ''
         lock.acquire()
         for i in range(len(send_buffer_list)):
             buffer += send_buffer_list.pop(0) + '\n'
         lock.release()
-        send_data(buffer)
+        send_data(buffer, lra1)
         time.sleep(10)
 
 def push_buffer(data, lock):
@@ -233,13 +232,14 @@ def on_exit():
 
 def main():
     atexit.register(on_exit)
-    lock = threading.Lock()
-    send_thread = threading.Thread(target=send_work, args=(lock, ))
-    send_thread.start()
 
     lra1 = LRA1(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD, LRA1_SERIAL_TIMEOUT)
     lra1.set_display(LRA1_ENABLE_DISPLAY)
     lra1.set_recv()
+
+    lock = threading.Lock()
+    send_thread = threading.Thread(target=send_work, args=(lock, lra1,))
+    send_thread.start()
 
     while work == True:
         try:
