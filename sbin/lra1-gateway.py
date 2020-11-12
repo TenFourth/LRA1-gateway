@@ -28,6 +28,8 @@ class LRA1():
         self.ser = None
         self.dev = dev
         self.baudrate = baudrate
+        self.own_id = None
+        self.own_sn = None
         self.timeout = timeout
         self.reset_ctl_pin = 4
 
@@ -103,33 +105,56 @@ class LRA1():
     def set_display(self, flag):
         self.display = flag
 
-    def _wait_for_ok(self):
-        get = ''
-        while (self.ser is not None and get != 'OK'):
+    def _get_lora_variables(self):
+        if (self.own_sn is None):
+            self._send('PRINT SN\r\n')
+            self.own_sn = self._get_response()
+        if (self.own_id is None):
+            self._send('PRINT OWN\r\n')
+            self.own_id = self._get_response()
+        syslog.syslog(syslog.LOG_INFO, 'SN=' + self.own_sn + ', OWN=' + self.own_id)
+
+    def _get_response(self):
+        if (self.ser is None):
+            return
+
+        begin = time.time()
+        last_data = ''
+        while (time.time() - begin < 10):
             get = self.ser.readline().strip()
+            if (get == 'OK'):
+                break
+            else:
+                last_data = get
             time.sleep(0.01)
-        time.sleep(0.1)  # prevent for dropping first character
+        time.sleep(0.1)  # prevent for dropping first character of command
+        return last_data
 
     def _display_message(self, message1='', message2='', clear=False):
         if (self.display == False):
             return
         if (clear == True):
             self._send('LCLR\r\n')
-            self._wait_for_ok()
+            self._get_response()
         if (message1):
             self._send('LPOS=0:LPRINT "' + message1 + '"\r\n')
-            self._wait_for_ok()
+            self._get_response()
         if (message2):
             self._send('LPOS=64:LPRINT "' + message2 + '"\r\n')
-            self._wait_for_ok()
+            self._get_response()
 
     def break_ctrl(self):
         self._send('\x03')  # Ctrl + C
-        self._wait_for_ok()
+        self._get_response()
+
+    def _cmd_recv(self):
+        self._display_message('Gateway ', str(self.own_sn))
+        self._send('RECV\r\n')
 
     def set_recv(self):
-        self._display_message('Gateway ', '   Ready')
-        self._send('RECV\r\n')
+        self.break_ctrl()
+        self._get_lora_variables()
+        self._cmd_recv()
 
 def get_miss_send():
     path = os.path.join(SAVEPATH_SEND_FAIL, 'send.data')
@@ -214,7 +239,6 @@ def main():
 
     lra1 = LRA1(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD, LRA1_SERIAL_TIMEOUT)
     lra1.set_display(LRA1_ENABLE_DISPLAY)
-    lra1.break_ctrl()
     lra1.set_recv()
 
     while work == True:
@@ -222,7 +246,6 @@ def main():
             data = lra1.receive()
             if(data.endswith('>') or len(data) == 0):
                 #syslog.syslog(syslog.LOG_INFO, 'received data -> [' + data + ']')
-                lra1.break_ctrl()
                 lra1.set_recv()
             else:
                 push_buffer(data, lock)
