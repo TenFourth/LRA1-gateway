@@ -29,11 +29,20 @@ class LRA1():
         self.dev = dev
         self.baudrate = baudrate
         self.timeout = timeout
+        self.reset_ctl_pin = 4
+
+        GPIO.setmode(GPIO.BCM)  # BCMの番号でGPIOを制御する
+        if self.is_HAT():
+            self.restart()
+
         self._open()
 
     def __del__(self):
         if (self.ser is not None):
+            if (self.display == True):
+                self._send('LCLR\r\n')
             self.ser.close()
+        GPIO.cleanup()
 
     def _open(self):
         if (self.ser is not None):
@@ -77,6 +86,19 @@ class LRA1():
             time.sleep(3)
 
         return data
+
+    def restart(self):
+        if (self.reset_ctl_pin is None):
+            return
+
+        GPIO.setup(self.reset_ctl_pin, GPIO.OUT)
+        GPIO.output(self.reset_ctl_pin, GPIO.LOW)
+        time.sleep(0.5)
+        GPIO.output(self.reset_ctl_pin, GPIO.HIGH)
+        time.sleep(3)
+
+    def is_HAT(self):
+        return (self.dev == '/dev/ttyS0')
 
     def set_display(self, flag):
         self.display = flag
@@ -189,14 +211,6 @@ def main():
     lock = threading.Lock()
     send_thread = threading.Thread(target=send_work, args=(lock, ))
     send_thread.start()
-
-    if (LRA1_SERIAL_DEV == '/dev/ttyS0'):
-        GPIO.setmode(GPIO.BCM)  #GPIOへアクセスする番号をBCMの番号で指定することを宣言します。                        
-        GPIO.setup(4,GPIO.OUT)
-        GPIO.output(4,GPIO.LOW)
-        time.sleep(0.5)
-        GPIO.output(4,GPIO.HIGH)
-        time.sleep(3)
 
     lra1 = LRA1(LRA1_SERIAL_DEV, LRA1_SERIAL_BAUD, LRA1_SERIAL_TIMEOUT)
     lra1.set_display(LRA1_ENABLE_DISPLAY)

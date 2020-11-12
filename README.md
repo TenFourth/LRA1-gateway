@@ -36,9 +36,9 @@ HTTP_POST_URL='http://localhost/upload.php'
 
 ### LoRaモジュールの設定
 
-| 設定名 | 説明 |
-|-------|------|
-| LRA1_SERIAL_DEV | 通信ポートのパスを指定します (例: /dev/ttyS0) |
-| LRA1_SERIAL_BAUD | シリアル通信のボーレートを指定します |
-| LRA1_SERIAL_TIMEOUT | 指定した時間(秒数)データが来ない時に、BREAK信号を送って待ち受け状態をやり直します |
-| LRA1_ENABLE_DISPLAY | LRA1評価ボードに搭載のLCDディスプレイにメッセージを表示するようにします |
+| 名前 | 値 | 説明 |
+|-----|----|------|
+| LRA1_SERIAL_DEV | 文字列 | 通信ポートのパスを指定します (例: /dev/ttyS0) |
+| LRA1_SERIAL_BAUD | 9600 や 115200 などの数値 | シリアル通信のボーレートを指定します |
+| LRA1_SERIAL_TIMEOUT | 1以上の数値か None | 指定した時間(秒数)データが来ない時に、BREAK信号を送って待ち受け状態をやり直します |
+| LRA1_ENABLE_DISPLAY | 0 か 1 | LRA1評価ボードに搭載のLCDディスプレイにメッセージを表示するようにします |
