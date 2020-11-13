@@ -146,6 +146,7 @@ class LRA1():
     def break_ctrl(self):
         self._send('\x03')  # Ctrl + C
         self._get_response()
+        self.ser.reset_input_buffer()
 
     def _cmd_recv(self):
         self._display_message('Gateway ', str(self.own_sn))
