@@ -60,6 +60,7 @@ class LRA1():
                 rtscts=False,
                 dsrdtr=False
             )
+            time.sleep(1)  # wait for LRA1 prompt starting
         except (serial.SerialException) as e:
             syslog.syslog(syslog.LOG_WARNING, 'Failed to open serial device ' + self.dev + ' - ' + e.strerror)
             self.ser = None
@@ -118,12 +119,12 @@ class LRA1():
             return
 
         begin = time.time()
-        last_data = ''
+        last_data = None
         while (time.time() - begin < 10):
             get = self.ser.readline().strip()
             if (get == 'OK'):
                 break
-            else:
+            elif (len(get) > 0):
                 last_data = get
             time.sleep(0.01)
         time.sleep(0.1)  # prevent for dropping first character of command
